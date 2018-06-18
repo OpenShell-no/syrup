@@ -27,7 +27,7 @@ RequestExecutionLevel user
 
 #InstallDir "$PROGRAMFILES\${COMPANYNAME}\${APPNAME}"
 InstallDir "$LOCALAPPDATA\${COMPANYNAME}\${APPNAME}"
- 
+
 # rtf or txt file - remember if it is txt, it must be in the DOS text format (\r\n)
 LicenseData "license.rtf"
 # This will be in the installer/uninstaller's title bar
@@ -53,7 +53,7 @@ Page instfiles
 #!macroend
  
 function .onInit
-	setShellVarContext all
+	setShellVarContext current
 #	!insertmacro VerifyUserIsAdmin
 functionEnd
  
@@ -99,7 +99,7 @@ sectionEnd
 # Uninstaller
  
 function un.onInit
-	SetShellVarContext all
+	SetShellVarContext current
  
 	#Verify the uninstaller - last chance to back out
 	MessageBox MB_OKCANCEL "Permanantly remove ${APPNAME}?" IDOK next
