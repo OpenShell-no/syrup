@@ -8,7 +8,7 @@ import shutil
 import stat
 from PIL import Image
 
-JULIA_VERSION = (0, 6, 3)
+JULIA_VERSION = (0, 6, 4)
 CHECKSUM_TYPE = "sha256"
 
 JULIA_BIN_FILENAME = "julia-{v[0]}.{v[1]}.{v[2]}-win64.exe".format(v=JULIA_VERSION)
