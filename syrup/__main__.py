@@ -162,7 +162,7 @@ def cleanBuild(builddir):
 
 def cleanArtifacts(artifactdir):
     print("Cleaning artifact directory...")
-    if os.path.exists("artifactdir"):
+    if os.path.exists(artifactdir):
         shutil.rmtree(artifactdir, onerror=lambda func, path, exec_info: print("WARNING: Failed to delete ", path, exec_info))
 
 def copySrc(src_dir, build_dir):
@@ -186,7 +186,7 @@ def compileNSISTemplate(build_dir, artifact_dir, executables, **kwargs):
     "Generates NSIS script from jinja2 template"
     print("Generating NSIS script...")
     import jinja2
-    loader = jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates'))
+    loader = jinja2.PackageLoader(__package__)
     env = jinja2.Environment(loader=loader, autoescape=False, undefined=jinja2.StrictUndefined)
 
     template = env.get_template("generic.nsi.j2")

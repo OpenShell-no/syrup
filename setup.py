@@ -1,9 +1,12 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 # TODO: include package data (templates)
 setup(
     name='syrup',
     version='0.0.1',
-    py_modules=['syrup'],
+    packages=find_packages(),
+    package_data={
+        '': ['templates/*']
+    },
     install_requires=[
         'click',
         'requests',
@@ -11,6 +14,7 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        syrup=syrup:cli
+        syrup=syrup.__main__:cli
     ''',
+    zip_safe=True,
 )
