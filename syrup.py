@@ -1,4 +1,3 @@
-import requests
 import hashlib
 import urllib
 import os
@@ -6,22 +5,14 @@ import sys
 import subprocess
 import shutil
 import stat
-from PIL import Image
 
-JULIA_VERSION = (0, 6, 4)
+from PIL import Image
+import requests
+import click
+
 CHECKSUM_TYPE = "sha256"
 
-JULIA_BIN_FILENAME = "julia-{v[0]}.{v[1]}.{v[2]}-win64.exe".format(v=JULIA_VERSION)
-JULIA_BIN = "https://julialang-s3.julialang.org/bin/winnt/x64/{v[0]}.{v[1]}/{file}".format(v=JULIA_VERSION, file=JULIA_BIN_FILENAME)
-JULIA_CHECKSUMS = "https://julialang-s3.julialang.org/bin/checksums/julia-{v[0]}.{v[1]}.{v[2]}.{checksum}".format(v=JULIA_VERSION, checksum=CHECKSUM_TYPE)
-
-LOGO_FILE = "logo-1024-a.png"
 ICON_SIZES = [16, 32, 48, 64, 96, 128, 256]
-
-JULIA_JUNK = [
-    "$PLUGINSDIR",
-    "Uninstall.exe",
-]
 
 TEMP_DIR = "tmp"
 BUILD_DIR = "build"
@@ -150,40 +141,10 @@ def checksum_file(path, checksum_type=CHECKSUM_TYPE):
             data = fh.read(1_048_576)
     return cs.hexdigest()
 
-
-def downloadJulia():
-    outfn = os.path.join(TEMP_DIR, JULIA_BIN_FILENAME)
-    csfile = "{}.{}".format(outfn, CHECKSUM_TYPE)
-
-    if os.path.exists(csfile) and os.path.exists(outfn):
-        cs = parse_checksum_file(open(csfile).read()).get(JULIA_BIN_FILENAME)
-        if cs == checksum_file(outfn):
-            print("Cached Julia installer ok.")
-            return outfn
-
-    checksums = parse_checksum_file(requests.get(JULIA_CHECKSUMS).text)
-    os.makedirs(os.path.dirname(outfn), exist_ok=True)
-
-    print("Downloading Julia installer file...")
-    fn, dlcs = download_file(JULIA_BIN, outfn)
-    
-    cs = checksums.get(os.path.basename(fn))
-
-    assert dlcs == cs, "Checksum verification on  download `{}` failed. `{}` != `{}`".format(JULIA_BIN, dlcs, cs)
-
-    with open(csfile, "w", encoding="utf-8") as fh:
-        fh.write(cs)
-        fh.write("  ")
-        fh.write(os.path.basename(fn))
-        fh.write("\n")
-    print("Download of `{}` completed and verified.".format(fn))
-
-    return outfn
-
 def cleanBuild():
     print("Cleaning build directory...")
     if os.path.exists(BUILD_DIR):
-        for path, dirs, files in os.walk(BUILD_DIR):
+        for path, _dirs, files in os.walk(BUILD_DIR):
             for name in files:
                 pathname = os.path.join(path, name)
                 # Silly git readonly files.
@@ -195,28 +156,6 @@ def cleanArtifacts():
     print("Cleaning artifact directory...")
     shutil.rmtree("artifacts", onerror=lambda func, path, exec_info: print("WARNING: Failed to delete ", path, exec_info))
 
-def extractJulia():
-    print("Extracting Julia...")
-    jbin1 = downloadJulia()
-    jbin2 = p7zip_extract_file(jbin1, "julia-installer.exe", target=TEMP_DIR)
-
-    jbuild = os.path.join(BUILD_DIR, "julia")
-
-    if os.path.exists(jbuild):
-        shutil.rmtree(jbuild)
-    
-    p7zip_extract(jbin2, jbuild)
-
-    for name in JULIA_JUNK:
-        p = os.path.join(jbuild, name)
-
-        if os.path.isdir(p):
-            shutil.rmtree(p)
-        elif os.path.exists(p):
-            os.remove(p)
-
-    print(jbin2)
-
 def copySrc():
     print("Copying src/*...")
     for name in os.listdir(SRC_DIR):
@@ -226,20 +165,20 @@ def copySrc():
         else:
             shutil.copy(src, BUILD_DIR)
 
-def makeIco():
+def makeIco(logo):
     "Generates .ico file from .png"
     print("Generating .ico file...")
-    im = Image.open(LOGO_FILE)
+    im = Image.open(logo)
     im.save(os.path.join(BUILD_DIR, "ahorn.ico"), sizes=[(x,x) for x in ICON_SIZES])
 
 def compileNSISTemplate():
     "Generates NSIS script from jinja2 template"
     print("Generating NSIS script...")
     import jinja2
-    loader = jinja2.FileSystemLoader('templates')
-    env = jinja2.Environment(loader=loader, autoescape=False)
+    loader = jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates'))
+    env = jinja2.Environment(loader=loader, autoescape=False, undefined=jinja2.StrictUndefined)
 
-    template = env.get_template("Ahorn.nsi.j2")
+    template = env.get_template("generic.nsi.j2")
 
     install_files = []
     install_dirs = []
@@ -262,7 +201,7 @@ def compileNSISTemplate():
         'outfile': os.path.join(ARTIFACT_DIR, "setup-${APPNAME}-${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}.exe"),
     }
 
-    with open("Ahorn.nsi", "w") as fh:
+    with open("generic.nsi", "w") as fh: # TODO: Temp file name.
         template.stream(**template_variables).dump(fh)
 
 def NSISBuildInstaller():
@@ -271,18 +210,19 @@ def NSISBuildInstaller():
     os.makedirs(ARTIFACT_DIR, exist_ok=True)
 
     # http://nsis.sourceforge.net/Docs/Chapter3.html#usage
-    print(cmd([TOOLS_NSIS, "/INPUTCHARSET", "UTF8", "/P3", "/V3", "Ahorn.nsi"], stdout=sys.stdout, stderr=sys.stderr, encoding="utf8"))
+    print(cmd([TOOLS_NSIS, "/INPUTCHARSET", "UTF8", "/P3", "/V3", "generic.nsi"], stdout=sys.stdout, stderr=sys.stderr, encoding="utf8"))
 
-def setupAhorn():
-    print("Running Ahorn setup...")
-    return cmd([os.path.join(BUILD_DIR, "julia.bat"), "setup-ahorn.jl"], stdout=None, stderr=None)
 
-if __name__ == "__main__":
+@click.command()
+def main():
     print(cleanArtifacts())
     print(cleanBuild())
-    print(extractJulia())
-    print(copySrc())
-    print(makeIco())
-    print(setupAhorn())
+    #print(copySrc())
+    #print(makeIco("fixme.png"))
+
     print(compileNSISTemplate())
+
     print(NSISBuildInstaller())
+
+if __name__ == "__main__":
+    main()
