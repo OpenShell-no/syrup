@@ -272,7 +272,7 @@ def compileNSISTemplate(build_dir, artifact_dir, executables, **kwargs):
     template_variables.update(kwargs)
 
     nsis_script = os.path.join(build_dir, "generic.nsi")
-    with open(nsis_script, "w") as fh: # TODO: Temp file name.
+    with open(nsis_script, "w", encoding="UTF-8") as fh: # TODO: Temp file name.
         template.stream(**template_variables).dump(fh)
     return nsis_script
 
