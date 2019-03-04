@@ -225,7 +225,7 @@ def makeIco(icon, name, build_dir):
     "Generates .ico file from .png"
     print("Generating .ico file...")
     im = Image.open(icon)
-    fn = "{name}.ico".format(name)
+    fn = "{name}.ico".format(name=name)
     im.save(os.path.join(build_dir, fn), sizes=[(x,x) for x in ICON_SIZES])
     return fn
 

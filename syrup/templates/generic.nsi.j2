@@ -46,7 +46,7 @@ LicenseData {{ license }}
 # This will be in the installer/uninstaller's title bar
 Name "${COMPANYNAME} - ${APPNAME}"
 {% if icon is defined and icon %}
-Icon "{{ icon }}"
+Icon "{{ icon_path }}"
 {% endif %}
 OutFile "{{ outfile }}"
  
