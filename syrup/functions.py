@@ -266,7 +266,7 @@ def compileNSISTemplate(build_dir, artifact_dir, executables, **kwargs):
         'files': install_files,
         'dirs': install_dirs,
         'outfile': os.path.join(artifact_dir, "${APPNAME}-${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}-setup.exe"),
-        'size': install_size,
+        'size': install_size / 1024,
         'executables': install_executables,
     }
     template_variables.update(kwargs)
