@@ -11,6 +11,7 @@ setup(
         'click',
         'requests',
         'Pillow',
+        'jinja2',
     ],
     entry_points='''
         [console_scripts]

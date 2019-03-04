@@ -9,6 +9,7 @@ import fnmatch
 
 from PIL import Image
 import requests
+import jinja2
 
 CHECKSUM_TYPE = "sha256"
 
@@ -233,7 +234,6 @@ def makeIco(icon, name, build_dir):
 def compileNSISTemplate(build_dir, artifact_dir, executables, **kwargs):
     "Generates NSIS script from jinja2 template"
     print("Generating NSIS script...")
-    import jinja2
     loader = jinja2.PackageLoader(__package__)
     env = jinja2.Environment(loader=loader, autoescape=False, undefined=jinja2.StrictUndefined)
 
