@@ -16,8 +16,64 @@ ICON_SIZES = [16, 32, 48, 64, 96, 128, 256]
 
 TEMP_DIR = "tmp"
 
-TOOLS_7ZIP = "./tools/7z"
-TOOLS_NSIS = "D:/Software/NSIS/Bin/makensis.exe"
+def findTool(exe, name=None):
+    exe = exe.lower()
+    if name is None:
+        name = exe
+
+    from collections import OrderedDict
+
+    PATHS        = OrderedDict.fromkeys([os.path.abspath(x) for x in os.environ.get('PATH',"").split(os.pathsep) if os.path.exists(x)]).keys()
+    EXTENSIONS   = [e.lower() for e in os.environ.get('PATHEXT', ".sh").split(os.pathsep)] + [""]
+    APPDATA      = os.environ.get('APPDATA')
+    LOCALAPPDATA = os.environ.get('LOCALAPPDATA')
+    HOME         = os.environ.get('HOME') or os.environ.get('USERPROFILE')
+
+    PROGRAMFILES = {os.path.abspath(x) for x in [
+        os.environ.get('ProgramFiles'),
+        os.environ.get('ProgramFiles(x86)'),
+        os.environ.get('ProgramW6432'),
+    ] if x}
+    
+    SEARCHPATH = list(PATHS)
+
+    HOMEPATHS = [
+        os.path.join(*['.local', 'bin']),
+        'bin',
+    ]
+
+    for p in HOMEPATHS:
+        bp = os.path.normpath(os.path.join(HOME, p))
+        if bp not in SEARCHPATH:
+            SEARCHPATH.insert(0, bp)
+
+    DIRSEARCHPATH = []
+    if LOCALAPPDATA:
+        DIRSEARCHPATH.append(LOCALAPPDATA)
+    if APPDATA:
+        DIRSEARCHPATH.append(APPDATA)
+    if PROGRAMFILES:
+        DIRSEARCHPATH.extend(PROGRAMFILES)
+    if os.path.exists("/opt"):
+        DIRSEARCHPATH.append("/opt")
+
+    if DIRSEARCHPATH:
+        for ds in DIRSEARCHPATH:
+            for p in os.listdir(ds):
+                if name in p.lower():
+                    bp = os.path.join(ds, p, "bin")
+                    if os.path.isdir(bp):
+                        SEARCHPATH.append(bp)
+                    SEARCHPATH.append(os.path.join(ds, p))
+
+    for path in SEARCHPATH:
+        print(path)
+        for ext in EXTENSIONS:
+            fp = os.path.join(path, exe + ext)
+            if os.path.exists(fp):
+                return os.path.normpath(fp)
+    print("WARNING: Unable to find {} ({})".format(exe, name)) # TODO: use logging module
+    return None
 
 def download_file(url, target=None, verbose=False):
     # https://stackoverflow.com/a/16696317
@@ -64,6 +120,7 @@ def cmd(args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, encoding=None):
         return p.returncode
 
 def p7zip_list(fn):
+    TOOLS_7ZIP = findTool('7z') or findTool('7za') or findTool('7zr')
     data = cmd([TOOLS_7ZIP, "l", "-slt", "-sccUTF-8", fn]).decode("utf-8")
 
     files = []
@@ -90,6 +147,7 @@ def p7zip_list(fn):
     return files
 
 def p7zip_open_file(fn, name):
+    TOOLS_7ZIP = findTool('7z') or findTool('7za') or findTool('7zr')
     p = subprocess.Popen(
         [TOOLS_7ZIP, "e", "-so", fn],
         stdout=subprocess.PIPE,
@@ -119,6 +177,7 @@ def p7zip_extract(fn, target=None):
         outpath = target
         os.makedirs(target, exist_ok=True)
     
+    TOOLS_7ZIP = findTool('7z') or findTool('7za') or findTool('7zr')
     p = subprocess.Popen(
         [TOOLS_7ZIP, "x", "-o{}".format(outpath), fn],
         stdout=subprocess.DEVNULL,
@@ -224,6 +283,10 @@ def NSISBuildInstaller(nsi_script, artifact_dir):
 
     os.makedirs(artifact_dir, exist_ok=True)
 
+    TOOLS_NSIS = findTool("makensis", "NSIS")
+    if TOOLS_NSIS is None:
+        print("ERROR: Unable to find makensis!\nMake sure you have NSIS installed, and that it is in PATH. https://nsis.sourceforge.io/Download")
+        return -1
     # http://nsis.sourceforge.net/Docs/Chapter3.html#usage
     command = [TOOLS_NSIS, "/NOCD", "/INPUTCHARSET", "UTF8", "/P3", "/V3", nsi_script]
     print(cmd(command, stdout=sys.stdout, stderr=sys.stderr, encoding="utf8"))

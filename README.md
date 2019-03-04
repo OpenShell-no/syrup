@@ -18,3 +18,7 @@ Developement
 git clone https://git.cruor.openshell.no/celestialcartographers/syrup.git
 pip install --editable ./syrup
 ```
+
+External dependencies
+=====================
+ * NSIS - https://nsis.sourceforge.io/Download
