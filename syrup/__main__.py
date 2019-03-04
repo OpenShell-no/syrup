@@ -74,7 +74,7 @@ def build(ctx, do_clean, version, name, company, description, license, icon, bui
         executables=executable,
         version=version,
         icon=icon, license=license,
-        icon_path=os.path.join(build_dir, icon),
+        icon_path=os.path.join(build_dir, icon) if icon else None,
         name=name, company=company,
         description=description,
         help_url=help_url, update_url=update_url, website_url=website_url,
