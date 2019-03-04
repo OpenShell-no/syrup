@@ -1,4 +1,5 @@
 tmp/
 build/
 artifacts/
-Ahorn.nsi
+__pycache__/
+syrup.egg-info/

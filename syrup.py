@@ -5,6 +5,8 @@ import sys
 import subprocess
 import shutil
 import stat
+from collections import namedtuple
+import fnmatch
 
 from PIL import Image
 import requests
@@ -15,12 +17,18 @@ CHECKSUM_TYPE = "sha256"
 ICON_SIZES = [16, 32, 48, 64, 96, 128, 256]
 
 TEMP_DIR = "tmp"
-BUILD_DIR = "build"
-SRC_DIR = "src"
-ARTIFACT_DIR = "artifacts"
 
 TOOLS_7ZIP = "./tools/7z"
 TOOLS_NSIS = "D:/Software/NSIS/Bin/makensis.exe"
+
+Version = namedtuple('Version', ['major', 'minor', 'build'])
+Version.__str__ = lambda self: "{self.major}.{self.minor}.{self.build}".format(self=self)
+
+@click.group()
+@click.version_option()
+def cli():
+    pass
+
 
 def download_file(url, target=None, verbose=False):
     # https://stackoverflow.com/a/16696317
@@ -141,37 +149,40 @@ def checksum_file(path, checksum_type=CHECKSUM_TYPE):
             data = fh.read(1_048_576)
     return cs.hexdigest()
 
-def cleanBuild():
+def cleanBuild(builddir):
     print("Cleaning build directory...")
-    if os.path.exists(BUILD_DIR):
-        for path, _dirs, files in os.walk(BUILD_DIR):
+    if os.path.exists(builddir):
+        for path, _dirs, files in os.walk(builddir):
             for name in files:
                 pathname = os.path.join(path, name)
                 # Silly git readonly files.
                 os.chmod(pathname, stat.S_IWRITE)
                 os.unlink(pathname)
-        shutil.rmtree(BUILD_DIR, onerror=lambda func, path, exec_info: print("WARNING: Failed to delete ", path, exec_info))
+        shutil.rmtree(builddir, onerror=lambda func, path, exec_info: print("WARNING: Failed to delete ", path, exec_info))
 
-def cleanArtifacts():
+def cleanArtifacts(artifactdir):
     print("Cleaning artifact directory...")
-    shutil.rmtree("artifacts", onerror=lambda func, path, exec_info: print("WARNING: Failed to delete ", path, exec_info))
+    if os.path.exists("artifactdir"):
+        shutil.rmtree(artifactdir, onerror=lambda func, path, exec_info: print("WARNING: Failed to delete ", path, exec_info))
 
-def copySrc():
+def copySrc(src_dir, build_dir):
     print("Copying src/*...")
-    for name in os.listdir(SRC_DIR):
-        src = os.path.join(SRC_DIR, name)
+    for name in os.listdir(src_dir):
+        src = os.path.join(src_dir, name)
         if os.path.isdir(src):
-            shutil.copytree(src, os.path.join(BUILD_DIR, name))
+            shutil.copytree(src, os.path.join(build_dir, name))
         else:
-            shutil.copy(src, BUILD_DIR)
+            shutil.copy(src, build_dir)
 
-def makeIco(logo):
+def makeIco(icon, name, build_dir):
     "Generates .ico file from .png"
     print("Generating .ico file...")
-    im = Image.open(logo)
-    im.save(os.path.join(BUILD_DIR, "ahorn.ico"), sizes=[(x,x) for x in ICON_SIZES])
+    im = Image.open(icon)
+    fn = "{name}.ico".format(name)
+    im.save(os.path.join(build_dir, fn), sizes=[(x,x) for x in ICON_SIZES])
+    return fn
 
-def compileNSISTemplate():
+def compileNSISTemplate(build_dir, artifact_dir, executables, **kwargs):
     "Generates NSIS script from jinja2 template"
     print("Generating NSIS script...")
     import jinja2
@@ -182,47 +193,119 @@ def compileNSISTemplate():
 
     install_files = []
     install_dirs = []
-    for path, dirs, files in os.walk(BUILD_DIR):
+    install_size = 0
+    install_executables = []
+    for path, dirs, files in os.walk(build_dir):
         for name in files:
             itempath = os.path.join(path, name)
+            outpath = os.path.relpath(itempath, build_dir)
+
             install_files.append(dict(
                 input = itempath,
-                output = os.path.relpath(itempath, BUILD_DIR),
+                output = outpath,
             ))
+
+            install_size += os.stat(itempath).st_size
+
+            for pat in executables:
+                if fnmatch.fnmatch(outpath, pat) and outpath not in install_executables:
+                    install_executables.append(outpath)
         
         for name in dirs:
             itempath = os.path.join(path, name)
-            relitempath = os.path.relpath(itempath, BUILD_DIR)
+            relitempath = os.path.relpath(itempath, build_dir)
             install_dirs.append(relitempath)
 
     template_variables = {
         'files': install_files,
         'dirs': install_dirs,
-        'outfile': os.path.join(ARTIFACT_DIR, "setup-${APPNAME}-${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}.exe"),
+        'outfile': os.path.join(artifact_dir, "${APPNAME}-${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}-setup.exe"),
+        'size': install_size,
+        'executables': install_executables,
     }
+    template_variables.update(kwargs)
 
-    with open("generic.nsi", "w") as fh: # TODO: Temp file name.
+    nsis_script = os.path.join(build_dir, "generic.nsi")
+    with open(nsis_script, "w") as fh: # TODO: Temp file name.
         template.stream(**template_variables).dump(fh)
+    return nsis_script
 
-def NSISBuildInstaller():
+def NSISBuildInstaller(nsi_script, artifact_dir):
     print("Building NSIS installer...")
 
-    os.makedirs(ARTIFACT_DIR, exist_ok=True)
+    os.makedirs(artifact_dir, exist_ok=True)
 
     # http://nsis.sourceforge.net/Docs/Chapter3.html#usage
-    print(cmd([TOOLS_NSIS, "/INPUTCHARSET", "UTF8", "/P3", "/V3", "generic.nsi"], stdout=sys.stdout, stderr=sys.stderr, encoding="utf8"))
+    command = [TOOLS_NSIS, "/NOCD", "/INPUTCHARSET", "UTF8", "/P3", "/V3", nsi_script]
+    print(cmd(command, stdout=sys.stdout, stderr=sys.stderr, encoding="utf8"))
 
+@cli.command()
+@click.option('--build-dir', default="build", type=click.Path(file_okay=False))
+@click.option('--artifact-dir', default="artifacts", type=click.Path(file_okay=False))
+@click.option('--clean-artifacts/--no-clean-artifacts', default=False)
+def clean(build_dir, artifact_dir, clean_artifacts, **kwargs):
+    if clean_artifacts:
+        cleanArtifacts(artifact_dir)
+    cleanBuild(build_dir)
 
-@click.command()
-def main():
-    print(cleanArtifacts())
-    print(cleanBuild())
-    #print(copySrc())
-    #print(makeIco("fixme.png"))
+def validate_version(ctx, param, value):
+    try:
+        return Version(*[int(x) if x else 0 for x in value.split('.')])
+    except:
+        raise click.BadParameter('version must be in major.minor.build format. (1.0.0)')
 
-    print(compileNSISTemplate())
+@cli.command()
+@click.option('--version', callback=validate_version, default="0.0.0", help="Version number of build (major.minor.build).")
+@click.option('--name', required=True, help="Application name.")
+@click.option('--company', required=True, help="Company name.")
+@click.option('--description', help="Application description.")
 
-    print(NSISBuildInstaller())
+@click.option('--license', default=None, type=click.Path(exists=True, dir_okay=False), help="Path to license file (rtf or txt with CRLF line endings).")
+@click.option('--icon', default=None, type=click.Path(exists=True, dir_okay=False), help="Path to image to use as icon.")
+
+@click.option('--clean/--no-clean', 'do_clean', default=True, help="Clean before building (default: true).")
+@click.option('--clean-artifacts/--no-clean-artifacts', default=False, help="Clean artifacts (default: false).")
+
+@click.option('--build-dir', default="build", type=click.Path(file_okay=False), help="Path to build (temporary) directory.")
+@click.option('--artifact-dir', default="artifacts", type=click.Path(file_okay=False), help="Path to installer output directory.")
+@click.option('--src-dir', default="src", type=click.Path(file_okay=False, exists=True), help="Path to application files to create installer from.")
+@click.option('--executable', '-e', multiple=True, default=["*.exe"], help="Path of executables to create startmenu shortcuts to. Relative to src-dir. Can be passed multiple times. (default: *.exe)")
+
+@click.option('--help-url', help="Help URL to display in 'Add/Remove Programs'. mailto: is allowed.")
+@click.option('--update-url', help="Update URL to display in 'Add/Remove Programs'. mailto: is allowed.")
+@click.option('--website-url', help="Website(about) URL to display in 'Add/Remove Programs'. mailto: is allowed.")
+
+@click.pass_context
+def build(ctx, do_clean, version, name, company, description, license, icon, build_dir, artifact_dir, src_dir, clean_artifacts, help_url, update_url, website_url, executable):
+    click.echo("Building {} v{}...".format(name, version))
+    click.echo(company)
+    click.echo(description)
+    click.echo(license)
+    click.echo(icon)
+    click.echo(build_dir)
+    click.echo(artifact_dir)
+    click.echo(src_dir)
+    click.echo(repr(executable))
+    if do_clean:
+        ctx.forward(clean)
+    
+    os.makedirs(build_dir, exist_ok=True)
+
+    print(copySrc(src_dir=src_dir, build_dir=build_dir))
+    if icon:
+        icon = makeIco(icon=icon, name=name, build_dir=build_dir)
+    
+    nsi_script = compileNSISTemplate(
+        build_dir=build_dir, artifact_dir=artifact_dir,
+        executables=executable,
+        version=version,
+        icon=icon, license=license,
+        name=name, company=company,
+        description=description,
+        help_url=help_url, update_url=update_url, website_url=website_url,
+    )
+
+    NSISBuildInstaller(nsi_script=nsi_script, artifact_dir=artifact_dir)
 
 if __name__ == "__main__":
-    main()
+    cli(auto_envvar_prefix='SYRUP')
