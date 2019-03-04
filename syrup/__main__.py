@@ -59,20 +59,13 @@ def validate_version(ctx, param, value):
 @click.pass_context
 def build(ctx, do_clean, version, name, company, description, license, icon, build_dir, artifact_dir, src_dir, clean_artifacts, help_url, update_url, website_url, executable):
     click.echo("Building {} v{}...".format(name, version))
-    click.echo(company)
-    click.echo(description)
-    click.echo(license)
-    click.echo(icon)
-    click.echo(build_dir)
-    click.echo(artifact_dir)
-    click.echo(src_dir)
-    click.echo(repr(executable))
     if do_clean:
         ctx.forward(clean)
     
     os.makedirs(build_dir, exist_ok=True)
 
-    print(copySrc(src_dir=src_dir, build_dir=build_dir))
+    copySrc(src_dir=src_dir, build_dir=build_dir)
+    
     if icon:
         icon = makeIco(icon=icon, name=name, build_dir=build_dir)
     

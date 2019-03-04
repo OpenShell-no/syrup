@@ -68,7 +68,6 @@ def findTool(exe, name=None):
                     SEARCHPATH.append(os.path.join(ds, p))
 
     for path in SEARCHPATH:
-        print(path)
         for ext in EXTENSIONS:
             fp = os.path.join(path, exe + ext)
             if os.path.exists(fp):
@@ -110,7 +109,6 @@ def parse_checksum_file(content):
     return result
 
 def cmd(args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, encoding=None):
-    #print(args)
     p = subprocess.Popen(args, stdout=stdout, stderr=stderr)
     if p.stdout is not None:
         if encoding is not None:
