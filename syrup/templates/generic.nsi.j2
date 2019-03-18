@@ -91,7 +91,7 @@ section "install"
 	# Start Menu
 	createDirectory "$SMPROGRAMS\${COMPANYNAME}"
 {% for executable in executables %}
-  	{% if prev is undefined %}
+  	{% if loop.first %}
 	  	{% if icon is defined and icon %}
 	createShortCut "$SMPROGRAMS\${COMPANYNAME}\${APPNAME}.lnk" "$INSTDIR\{{ executable }}" "" "$INSTDIR\{{ icon }}"
 		{% else %}
@@ -135,6 +135,11 @@ section "install"
 	# Set the INSTALLSIZE constant (!defined at the top of this script) so Add/Remove Programs can accurately report the size
 	WriteRegDWORD "${REG}" "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "EstimatedSize" ${INSTALLSIZE}
 
+{% if postinstall is defined and postinstall %}
+{% for cmd in postinstall %}
+	ExecDos::exec /DETAILED "{{ cmd }}"
+{% endfor %}
+{% endif %}
 sectionEnd
  
 # Uninstaller

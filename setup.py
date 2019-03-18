@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 # TODO: include package data (templates)
 setup(
     name='syrup',
-    version='0.0.1',
+    version='0.0.2',
     packages=find_packages(),
     package_data={
         '': ['templates/*']

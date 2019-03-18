@@ -51,13 +51,14 @@ def validate_version(ctx, param, value):
 @click.option('--artifact-dir', default="artifacts", type=click.Path(file_okay=False), help="Path to installer output directory.")
 @click.option('--src-dir', default="src", type=click.Path(file_okay=False, exists=True), help="Path to application files to create installer from.")
 @click.option('--executable', '-e', multiple=True, default=["*.exe"], help="Path of executables to create startmenu shortcuts to. Relative to src-dir. Can be passed multiple times. (default: *.exe)")
+@click.option('--postinstall', '-p', multiple=True, default=None, help="Commands to run post-install (at the end of installer)")
 
 @click.option('--help-url', help="Help URL to display in 'Add/Remove Programs'. mailto: is allowed.")
 @click.option('--update-url', help="Update URL to display in 'Add/Remove Programs'. mailto: is allowed.")
 @click.option('--website-url', help="Website(about) URL to display in 'Add/Remove Programs'. mailto: is allowed.")
 
 @click.pass_context
-def build(ctx, do_clean, version, name, company, description, license, icon, build_dir, artifact_dir, src_dir, clean_artifacts, help_url, update_url, website_url, executable):
+def build(ctx, do_clean, version, name, company, description, license, icon, build_dir, artifact_dir, src_dir, clean_artifacts, help_url, update_url, website_url, executable, postinstall):
     click.echo("Building {} v{}...".format(name, version))
     if do_clean:
         ctx.forward(clean)
@@ -78,6 +79,7 @@ def build(ctx, do_clean, version, name, company, description, license, icon, bui
         name=name, company=company,
         description=description,
         help_url=help_url, update_url=update_url, website_url=website_url,
+        postinstall=postinstall,
     )
 
     NSISBuildInstaller(nsi_script=nsi_script, artifact_dir=artifact_dir)
