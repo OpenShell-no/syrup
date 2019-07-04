@@ -1,7 +1,7 @@
 Installation
 ============
 ```
-pip install git+https://git.cruor.openshell.no/celestialcartographers/syrup.git
+pip install git+https://github.com/OpenShell-no/syrup.git
 ```
 
 Usage
@@ -15,7 +15,7 @@ See `syrup build --help` for details.
 Developement
 ============
 ```
-git clone https://git.cruor.openshell.no/celestialcartographers/syrup.git
+git clone https://github.com/OpenShell-no/syrup.git
 pip install --editable ./syrup
 ```
 
