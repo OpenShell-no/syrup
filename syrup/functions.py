@@ -286,5 +286,5 @@ def NSISBuildInstaller(nsi_script, artifact_dir):
         print("ERROR: Unable to find makensis!\nMake sure you have NSIS installed, and that it is in PATH. https://nsis.sourceforge.io/Download")
         return -1
     # http://nsis.sourceforge.net/Docs/Chapter3.html#usage
-    command = [TOOLS_NSIS, "/NOCD", "/INPUTCHARSET", "UTF8", "/P3", "/V3", nsi_script]
+    command = [TOOLS_NSIS, "-NOCD", "-INPUTCHARSET", "UTF8", "-P3", "-V3", nsi_script]
     print(cmd(command, stdout=sys.stdout, stderr=sys.stderr, encoding="utf8"))
