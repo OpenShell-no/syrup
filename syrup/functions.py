@@ -244,7 +244,7 @@ def compileNSISTemplate(build_dir, artifact_dir, executables, **kwargs):
     for path, dirs, files in os.walk(build_dir):
         for name in files:
             itempath = os.path.join(path, name)
-            outpath = os.path.relpath(itempath, build_dir)
+            outpath = os.path.relpath(itempath, build_dir).replace(os.path.sep, '\\')
 
             install_files.append(dict(
                 input = itempath,
@@ -259,8 +259,8 @@ def compileNSISTemplate(build_dir, artifact_dir, executables, **kwargs):
         
         for name in dirs:
             itempath = os.path.join(path, name)
-            relitempath = os.path.relpath(itempath, build_dir)
-            install_dirs.append(relitempath)
+            outpath = os.path.relpath(itempath, build_dir).replace(os.path.sep, '\\')
+            install_dirs.append(outpath)
 
     template_variables = {
         'files': install_files,
