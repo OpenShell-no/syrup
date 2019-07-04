@@ -58,10 +58,11 @@ def findTool(exe, name=None):
     if os.path.exists("/opt"):
         DIRSEARCHPATH.append("/opt")
 
+    lower_name = name.lower()
     if DIRSEARCHPATH:
         for ds in DIRSEARCHPATH:
             for p in os.listdir(ds):
-                if name in p.lower():
+                if lower_name in p.lower():
                     bp = os.path.join(ds, p, "bin")
                     if os.path.isdir(bp):
                         SEARCHPATH.append(bp)
