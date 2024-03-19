@@ -1,9 +1,9 @@
 # This installs two files, app.exe and logo.ico, creates a start menu shortcut, builds an uninstaller, and
 # adds uninstall information to the registry for Add/Remove Programs
- 
+
 # To get started, put this script into a folder with the two files (app.exe, logo.ico, and license.rtf -
 # You'll have to create these yourself) and run makensis on it
- 
+
 # If you change the names "app.exe", "logo.ico", or "license.rtf" you should do a search and replace - they
 # show up in a few places.
 # All the other settings can be tweaked by editing the !defines at the top of this script
@@ -32,7 +32,7 @@
 # This is the size (in kB) of all the files copied into "Program Files"
 !define INSTALLSIZE {{ size }}
 !define REG HKCU
- 
+
 #RequestExecutionLevel admin ;Require admin rights on NT6+ (When UAC is turned on)
 RequestExecutionLevel user
 
@@ -49,16 +49,16 @@ Name "${COMPANYNAME} - ${APPNAME}"
 Icon "{{ icon_path }}"
 {% endif %}
 OutFile "{{ outfile }}"
- 
+
 !include LogicLib.nsh
- 
+
 # Just three pages - license agreement, install location, and installation
 {% if license is defined and license %}
 page license
 {% endif %}
 page directory
 Page instfiles
- 
+
 #!macro VerifyUserIsAdmin
 #UserInfo::GetAccountType
 #pop $0
@@ -68,16 +68,16 @@ Page instfiles
 #		quit
 #${EndIf}
 #!macroend
- 
+
 function .onInit
 	setShellVarContext current
 #	!insertmacro VerifyUserIsAdmin
 functionEnd
- 
+
 section "install"
 	# Files for the install directory - to build the installer, these should be in the same directory as the install script (this file)
 	setOutPath $INSTDIR
-	
+
 {% for dir in dirs %}
 	CreateDirectory "$INSTDIR\{{ dir }}"{% endfor %}
 
@@ -101,7 +101,7 @@ section "install"
 	createShortCut "$SMPROGRAMS\${COMPANYNAME}\{{ executable | replace(".exe", "") }}.lnk" "$INSTDIR\{{ executable }}"
   	{% endif %}
 {% endfor %}
- 
+
 	# Registry information for add/remove programs
 {% if description is defined and description %}
 	WriteRegStr "${REG}" "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "DisplayName" "${APPNAME} - ${DESCRIPTION}"
@@ -141,39 +141,39 @@ section "install"
 {% endfor %}
 {% endif %}
 sectionEnd
- 
+
 # Uninstaller
- 
+
 function un.onInit
 	SetShellVarContext current
- 
+
 	#Verify the uninstaller - last chance to back out
 	MessageBox MB_OKCANCEL "Permanantly remove ${APPNAME}?" IDOK next
 		Abort
 	next:
 #	!insertmacro VerifyUserIsAdmin
 functionEnd
- 
+
 section "uninstall"
- 
+
 	# Remove Start Menu launcher
 	delete "$SMPROGRAMS\${COMPANYNAME}\${APPNAME}.lnk"
 	# Try to remove the Start Menu folder - this will only happen if it is empty
 	rmDir "$SMPROGRAMS\${COMPANYNAME}"
- 
+
 	# Remove files
 {% for file in files %}
 	delete "$INSTDIR\{{ file.output }}"{% endfor %}
 
 {% for dir in dirs %}
 	rmDir "$INSTDIR\{{ dir }}"{% endfor %}
- 
+
 	# Always delete uninstaller as the last action
 	delete "$INSTDIR\uninstall.exe"
- 
+
 	# Try to remove the install directory - this will only happen if it is empty
 	rmDir "$INSTDIR"
- 
+
 	# Remove uninstaller information from the registry
 	DeleteRegKey "${REG}" "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}"
 sectionEnd

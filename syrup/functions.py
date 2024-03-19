@@ -35,7 +35,7 @@ def findTool(exe, name=None):
         os.environ.get('ProgramFiles(x86)'),
         os.environ.get('ProgramW6432'),
     ] if x}
-    
+
     SEARCHPATH = list(PATHS)
 
     HOMEPATHS = [
@@ -133,7 +133,7 @@ def p7zip_list(fn):
 
     for fileinfo in filelist:
         if not fileinfo.strip(): continue
-        
+
         fi = dict([[y.strip() for y in x.split('=', 1)] for x in fileinfo.strip().split('\n')])
 
         if fi.get('Attributes') == 'D': continue # Directory
@@ -143,7 +143,7 @@ def p7zip_list(fn):
             'size': int(fi.get('Size')),
             'crc': fi.get('CRC'),
         })
-    
+
     return files
 
 def p7zip_open_file(fn, name):
@@ -176,7 +176,7 @@ def p7zip_extract(fn, target=None):
     else:
         outpath = target
         os.makedirs(target, exist_ok=True)
-    
+
     TOOLS_7ZIP = findTool('7z') or findTool('7za') or findTool('7zr')
     p = subprocess.Popen(
         [TOOLS_7ZIP, "x", "-o{}".format(outpath), fn],
@@ -185,7 +185,7 @@ def p7zip_extract(fn, target=None):
     )
     p.wait()
     return outpath
-    
+
 
 
 def checksum_file(path, checksum_type=CHECKSUM_TYPE):
@@ -257,7 +257,7 @@ def compileNSISTemplate(build_dir, artifact_dir, executables, **kwargs):
             for pat in executables:
                 if fnmatch.fnmatch(outpath, pat) and outpath not in install_executables:
                     install_executables.append(outpath)
-        
+
         for name in dirs:
             itempath = os.path.join(path, name)
             outpath = os.path.relpath(itempath, build_dir).replace(os.path.sep, '\\')

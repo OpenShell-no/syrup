@@ -62,14 +62,14 @@ def build(ctx, do_clean, version, name, company, description, license, icon, bui
     click.echo("Building {} v{}...".format(name, version))
     if do_clean:
         ctx.forward(clean)
-    
+
     os.makedirs(build_dir, exist_ok=True)
 
     copySrc(src_dir=src_dir, build_dir=build_dir)
-    
+
     if icon:
         icon = makeIco(icon=icon, name=name, build_dir=build_dir)
-    
+
     nsi_script = compileNSISTemplate(
         build_dir=build_dir, artifact_dir=artifact_dir,
         executables=executable,

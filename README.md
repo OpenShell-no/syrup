@@ -25,5 +25,5 @@ External dependencies
  * Python >= 3.5 - https://python.org/
  * NSIS >= 3.04 - https://nsis.sourceforge.io/Download \
    The following packages works for Mint 19 "tessa" (Ubuntu 18.04 "bionic"):
-    - https://packages.ubuntu.com/disco/amd64/nsis/download  
+    - https://packages.ubuntu.com/disco/amd64/nsis/download
     - https://packages.ubuntu.com/disco/all/nsis-common/download
