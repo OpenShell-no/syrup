@@ -357,5 +357,5 @@ def NSISBuildInstaller(nsi_script, artifact_dir):
         )
         return -1
     # http://nsis.sourceforge.net/Docs/Chapter3.html#usage
-    command = [TOOLS_NSIS, "-NOCD", "-INPUTCHARSET", "UTF8", "-P3", "-V3", nsi_script]
+    command = [TOOLS_NSIS, "-NOCD", "-INPUTCHARSET", "UTF8", "-V3", nsi_script]
     print(cmd(command, stdout=sys.stdout, stderr=sys.stderr, encoding="utf8"))
