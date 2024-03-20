@@ -3,4 +3,7 @@
 	"[python]": {
 		"editor.defaultFormatter": "ms-python.black-formatter"
 	},
+	"files.associations": {
+		"*.nsi.j2": "jinja"
+	},
 }
