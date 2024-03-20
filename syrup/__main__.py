@@ -4,6 +4,7 @@ from collections import namedtuple
 import click
 
 from .functions import (
+    DEFAULT_NSIS_TEMPLATE,
     cleanArtifacts,
     cleanBuild,
     copySrc,
@@ -37,8 +38,19 @@ def clean(build_dir, artifact_dir, clean_artifacts, **kwargs):
 def validate_version(ctx, param, value):
     try:
         return Version(*[int(x) if x else 0 for x in value.split(".")])
-    except:
-        raise click.BadParameter("version must be in major.minor.build format. (1.0.0)")
+    except Exception as ex:
+        raise click.BadParameter(
+            "version must be in major.minor.build format. (1.0.0)"
+        ) from ex
+
+
+def validate_template(ctx, param, value):
+    if value.startswith("builtin:"):
+        return value
+
+    return click.Path(
+        exists=True, resolve_path=True, readable=True, file_okay=True, dir_okay=False
+    )(value=value, param=param, ctx=ctx)
 
 
 @cli.command()
@@ -118,6 +130,12 @@ def validate_version(ctx, param, value):
     "--website-url",
     help="Website(about) URL to display in 'Add/Remove Programs'. mailto: is allowed.",
 )
+@click.option(
+    "--template",
+    help="Jinja2 NSIS Template",
+    default=DEFAULT_NSIS_TEMPLATE,
+    callback=validate_template,
+)
 @click.pass_context
 def build(
     ctx,
@@ -135,6 +153,7 @@ def build(
     help_url,
     update_url,
     website_url,
+    template,
     executable,
     postinstall,
 ):
@@ -153,6 +172,7 @@ def build(
         build_dir=build_dir,
         artifact_dir=artifact_dir,
         executables=executable,
+        template_name=template,
         version=version,
         icon=icon,
         license=license,

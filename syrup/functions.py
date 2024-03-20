@@ -271,15 +271,34 @@ def makeIco(icon, name, build_dir):
     return fn
 
 
-def compileNSISTemplate(build_dir, artifact_dir, executables, **kwargs):
+DEFAULT_NSIS_TEMPLATE = "builtin:generic.nsi.j2"
+
+
+def compileNSISTemplate(
+    build_dir,
+    artifact_dir,
+    executables,
+    template_name=DEFAULT_NSIS_TEMPLATE,
+    **kwargs,
+):
     "Generates NSIS script from jinja2 template"
     print("Generating NSIS script...")
-    loader = jinja2.PackageLoader(__package__)
+    loader = jinja2.ChoiceLoader(
+        [
+            jinja2.PrefixLoader(
+                {
+                    "builtin": jinja2.PackageLoader(__package__),
+                },
+                delimiter=":",
+            ),
+            jinja2.FileSystemLoader("/", followlinks=True),
+        ]
+    )
     env = jinja2.Environment(
         loader=loader, autoescape=False, undefined=jinja2.StrictUndefined
     )
 
-    template = env.get_template("generic.nsi.j2")
+    template = env.get_template(template_name)
 
     install_files = []
     install_dirs = []
@@ -320,7 +339,7 @@ def compileNSISTemplate(build_dir, artifact_dir, executables, **kwargs):
     }
     template_variables.update(kwargs)
 
-    nsis_script = os.path.join(build_dir, "generic.nsi")
+    nsis_script = os.path.join(build_dir, "syrup.nsi")
     with open(nsis_script, "w", encoding="UTF-8") as fh:  # TODO: Temp file name.
         template.stream(**template_variables).dump(fh)
     return nsis_script
